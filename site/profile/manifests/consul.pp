@@ -1,22 +1,29 @@
 class profile::consul::server {
+
+  $server = lookup('profile::consul::client::server_ip')
+  if ($server == $facts['ipaddress']) {
+    $config_hash = { 'bootstrap_expect' => 1 }
+  } else {
+    $config_hash = { 'retry_join' => [$server] }
+  }
+
   class { '::consul':
     config_mode   => '0640',
     acl_api_token => lookup('profile::consul::acl_api_token'),
-    config_hash   => {
-      'bootstrap_expect' => 1,
-      'data_dir'         => '/opt/consul',
-      'log_level'        => 'INFO',
-      'node_name'        => $facts['hostname'],
-      'server'           => true,
-      'acl_agent_token'  => lookup('profile::consul::acl_api_token'),
-      'acl'              => {
+    config_hash   => merge({
+      'data_dir'        => '/opt/consul',
+      'log_level'       => 'INFO',
+      'node_name'       => $facts['hostname'],
+      'server'          => true,
+      'acl_agent_token' => lookup('profile::consul::acl_api_token'),
+      'acl'             => {
         'enabled'        => true,
         'default_policy' => 'deny',
         'tokens'         => {
           'master' => lookup('profile::consul::acl_api_token')
         }
       }
-    }
+    }, $config_hash)
   }
 
   tcp_conn_validator { 'consul':

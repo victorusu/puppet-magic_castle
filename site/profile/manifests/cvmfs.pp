@@ -2,6 +2,7 @@ class profile::cvmfs::client(
   Integer $quota_limit,
   Array[String] $repositories,
   Array[String] $lmod_default_modules,
+  Optional[String] $alien_cache = undef,
 ){
   package { 'cvmfs-repo':
     ensure   => 'installed',
@@ -27,6 +28,7 @@ class profile::cvmfs::client(
     content => epp('profile/cvmfs/default.local', {
       'quota_limit'  => $quota_limit,
       'repositories' => $repositories,
+      'alien_cache'  => $alien_cache,
     }),
     require => Package['cvmfs']
   }

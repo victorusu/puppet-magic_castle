@@ -24,4 +24,9 @@ class profile::jupyterhub::node {
       Class['profile::cvmfs::client'] -> Class['jupyterhub::kernel::venv']
     }
   }
+  exec { 'pip_jupyter-pvserver-webproxy':
+    command => "${::jupyterhub::node::prefix}/bin/pip install --no-cache-dir https://github.com/cmd-ntrf/pvserver-webproxy/archive/main.zip",
+    creates => "${::jupyterhub::node::prefix}/lib/python3.6/site-packages/pvserver-webproxy/",
+    require => Class['jupyterhub::node']
+  }
 }

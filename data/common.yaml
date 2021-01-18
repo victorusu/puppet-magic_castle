@@ -55,11 +55,22 @@ jupyterhub::jupyterhub_config_hash:
       desktop:
         name: Desktop
         args: ['--SingleUserNotebookApp.default_url=/Desktop']
-
+      paraview:
+        name: ParaView Server
+        args: ['--SingleUserNotebookApp.default_url=/paraview']
   SbatchForm:
     ui:
       choices: ['notebook', 'lab', 'terminal', 'code-server', 'rstudio', 'desktop']
       def: 'lab'
+
+jupyterhub::jupyter_notebook_config_hash:
+  ServerProxy:
+    servers:
+      paraview:
+        command: ["/opt/jupyterhub/bin/python", "-m", "pvserver-proxy", "{port}"]
+        timeout: 60
+        launcher_entry:
+          title: ParaView Server
 
 squid::cache_mem: "256 MB"
 squid::extra_config_sections:

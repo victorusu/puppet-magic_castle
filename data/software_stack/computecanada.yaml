@@ -10,6 +10,12 @@ jupyterhub::jupyterhub_config_hash:
         modules: ['gcc/7.3.0', 'rstudio-server']
       code-server:
         modules: ['code-server']
+      paraview:
+        modules:
+          - 'StdEnv/2020'
+          - 'gcc/9.3.0'
+          - 'openmpi/4.0.3'
+          - 'paraview-offscreen/5.8.0'
 
 profile::cvmfs::client::repositories:
   - cvmfs-config.computecanada.ca

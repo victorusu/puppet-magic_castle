@@ -71,6 +71,7 @@ jupyterhub::jupyter_notebook_config_hash:
         timeout: 60
         launcher_entry:
           title: ParaView Server
+          enabled: false
 
 squid::cache_mem: "256 MB"
 squid::extra_config_sections:

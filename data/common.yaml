@@ -60,7 +60,7 @@ jupyterhub::jupyterhub_config_hash:
         args: ['--SingleUserNotebookApp.default_url=/paraview']
   SbatchForm:
     ui:
-      choices: ['notebook', 'lab', 'terminal', 'code-server', 'rstudio', 'desktop']
+      choices: ['notebook', 'lab', 'terminal', 'code-server', 'rstudio', 'desktop', 'paraview']
       def: 'lab'
 
 jupyterhub::jupyter_notebook_config_hash:

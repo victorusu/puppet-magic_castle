@@ -67,7 +67,7 @@ jupyterhub::jupyter_notebook_config_hash:
   ServerProxy:
     servers:
       paraview:
-        command: ["/opt/jupyterhub/bin/python", "-m", "pvserver-proxy", "{port}"]
+        command: ["/opt/jupyterhub/bin/python", "-m", "pvserver-webproxy", "{port}"]
         timeout: 60
         launcher_entry:
           title: ParaView Server

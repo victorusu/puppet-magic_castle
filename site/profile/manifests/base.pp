@@ -8,9 +8,15 @@ class profile::base (
   include epel
 
   if dig($::facts, 'os', 'release', 'major') == '8' {
+    if dig($::facts, 'os', 'name') == 'CentOS' {
+      $powertools_repo_name = 'CentOS-Linux-PowerTools.repo'
+    } elsif dig($::facts, 'os', 'name') == 'Rocky' {
+      $powertools_repo_name = 'Rocky-PowerTools.repo'
+    }
+
     file_line { 'enable_powertools':
       ensure => present,
-      path   => '/etc/yum.repos.d/CentOS-Linux-PowerTools.repo',
+      path   => "/etc/yum.repos.d/${powertools_repo_name}",
       line   => 'enabled=1',
       match  => '^enabled=0$',
     }

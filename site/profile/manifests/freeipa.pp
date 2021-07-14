@@ -46,13 +46,13 @@ class profile::freeipa::base (
   }
 
   file { 'resolv.conf':
-    path    => '/etc/resolv.conf',
     ensure  => present,
+    path    => '/etc/resolv.conf',
     mode    => '0644',
     notify  => Service['NetworkManager'],
     content => @("END")
-search "int.${domain_name}";
-nameserver ${dns_ip};
+search int.${domain_name}
+nameserver ${dns_ip}
 END
   }
 

@@ -10,10 +10,6 @@ class profile::freeipa::base (
       creates => '/etc/dnf/modules.d/idm.module',
       path    => ['/usr/bin', '/usr/sbin']
     }
-
-    package { 'network-scripts':
-      ensure => 'installed'
-    }
   }
 
   package { 'systemd':
@@ -21,22 +17,12 @@ class profile::freeipa::base (
   }
 
   service { 'NetworkManager':
-    ensure => stopped,
-    enable => false
-  }
-
-  service { 'network':
     ensure => running,
-    enable => true,
+    enable => true
   }
 
-  package { [
-    'NetworkManager',
-    'NetworkManager-tui',
-    'NetworkManager-team'
-    ]:
-    ensure => purged,
-    notify => Service['network'],
+  package { 'NetworkManager':
+    ensure => present,
   }
 
   service { 'systemd-logind':
@@ -51,21 +37,22 @@ class profile::freeipa::base (
     mode   => '0755'
   }
 
-  file { '/etc/dhclient.conf':
-    ensure => absent
+  file_line { 'NetworkManager_dns':
+    ensure => present,
+    path   => '/etc/NetworkManager/NetworkManager.conf',
+    line   => 'dns=none',
+    after  => '^\[main\]$',
+    notify => Service['NetworkManager'],
   }
 
-  file { 'dhclient.conf':
+  file { 'resolv.conf':
+    path    => '/etc/resolv.conf',
     ensure  => present,
-    path    => '/etc/dhcp/dhclient.conf',
     mode    => '0644',
-    require => Service['NetworkManager'],
-    notify  => Service['network'],
+    notify  => Service['NetworkManager'],
     content => @("END")
-# Set the dhclient retry interval to 10 seconds instead of 5 minutes.
-retry 10;
-prepend domain-search "int.${domain_name}";
-prepend domain-name-servers ${dns_ip};
+search "int.${domain_name}";
+nameserver ${dns_ip};
 END
   }
 
@@ -157,7 +144,7 @@ class profile::freeipa::client(String $server_ip)
     try_sleep => 60,
     require   => [
       File['/sbin/mc-ipa-client-install'],
-      File['dhclient.conf'],
+      File['resolv.conf'],
       Exec['set_hostname'],
       Wait_for['ipa-ca_https'],
     ],
@@ -291,7 +278,7 @@ class profile::freeipa::server
     creates => '/etc/ipa/default.conf',
     timeout => 0,
     require => [Package['ipa-server-dns']],
-    before  => File['dhclient.conf'],
+    before  => File['resolv.conf'],
     notify  => Service['systemd-logind']
   }
 

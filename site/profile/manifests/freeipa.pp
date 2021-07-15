@@ -25,6 +25,10 @@ class profile::freeipa::base (
     ensure => present,
   }
 
+  package { 'dhclient':
+    ensure => absent,
+  }
+
   service { 'systemd-logind':
     ensure => running,
     enable => true

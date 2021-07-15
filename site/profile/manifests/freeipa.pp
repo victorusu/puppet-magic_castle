@@ -25,8 +25,10 @@ class profile::freeipa::base (
     ensure => present,
   }
 
-  package { 'dhclient':
-    ensure => absent,
+  if dig($::facts, 'os', 'release', 'major') == '8' {
+    package { 'dhclient':
+      ensure => absent,
+    }
   }
 
   service { 'systemd-logind':

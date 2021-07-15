@@ -45,15 +45,21 @@ class profile::freeipa::base (
     notify => Service['NetworkManager'],
   }
 
-  file { 'resolv.conf':
+  file_line { 'resolv.conf_search':
+    ensure => present,
+    path   => '/etc/resolv.conf',
+    line   => "search int.${domain_name}",
+    match  => '^search\ ',
+    notify => Service['NetworkManager'],
+  }
+
+  file_line { 'resolv.conf_nameserver':
     ensure  => present,
     path    => '/etc/resolv.conf',
-    mode    => '0644',
+    line    => "nameserver ${dns_ip}",
+    after   => "search int.${domain_name}",
     notify  => Service['NetworkManager'],
-    content => @("END")
-search int.${domain_name}
-nameserver ${dns_ip}
-END
+    require => File_line['resolv.conf_search']
   }
 
   file { '/etc/rsyslog.d/ignore-systemd-session-slice.conf':

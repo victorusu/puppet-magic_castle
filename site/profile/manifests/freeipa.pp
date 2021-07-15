@@ -150,7 +150,7 @@ class profile::freeipa::client(String $server_ip)
     try_sleep => 60,
     require   => [
       File['/sbin/mc-ipa-client-install'],
-      File['resolv.conf'],
+      File_line['resolv.conf_nameserver'],
       Exec['set_hostname'],
       Wait_for['ipa-ca_https'],
     ],
@@ -284,7 +284,7 @@ class profile::freeipa::server
     creates => '/etc/ipa/default.conf',
     timeout => 0,
     require => [Package['ipa-server-dns']],
-    before  => File['resolv.conf'],
+    before  => File_line['resolv.conf_nameserver'],
     notify  => Service['systemd-logind']
   }
 

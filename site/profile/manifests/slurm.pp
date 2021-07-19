@@ -157,7 +157,7 @@ END
     yumrepo { 'pmix-copr-repo':
       enabled             => true,
       descr               => 'Copr repo for PMIx owned by cmdntrf',
-      baseurl             => 'https://copr-be.cloud.fedoraproject.org/results/cmdntrf/openpmix/epel-\$releasever-\$basearch/',
+      baseurl             => 'https://copr-be.cloud.fedoraproject.org/results/cmdntrf/openpmix/epel-$releasever-$basearch/',
       skip_if_unavailable => true,
       gpgcheck            => 1,
       gpgkey              => 'https://copr-be.cloud.fedoraproject.org/results/cmdntrf/openpmix/pubkey.gpg',

@@ -147,12 +147,23 @@ END
     yumrepo { 'slurm-copr-repo':
       enabled             => true,
       descr               => "Copr repo for Slurm${slurm_version} owned by cmdntrf",
-      baseurl             => "https://copr-be.cloud.fedoraproject.org/results/cmdntrf/Slurm${slurm_version}/epel-\$releasever-\$basearch/",
+      baseurl             => "https://copr-be.cloud.fedoraproject.org/results/cmdntrf/Slurm${slurm_version}_pmix/epel-\$releasever-\$basearch/",
       skip_if_unavailable => true,
       gpgcheck            => 1,
-      gpgkey              => "https://copr-be.cloud.fedoraproject.org/results/cmdntrf/Slurm${slurm_version}/pubkey.gpg",
+      gpgkey              => "https://copr-be.cloud.fedoraproject.org/results/cmdntrf/Slurm${slurm_version}_pmix/pubkey.gpg",
       repo_gpgcheck       => 0,
     }
+
+    yumrepo { 'pmix-copr-repo':
+      enabled             => true,
+      descr               => 'Copr repo for PMIx owned by cmdntrf',
+      baseurl             => 'https://copr-be.cloud.fedoraproject.org/results/cmdntrf/openpmix/epel-\$releasever-\$basearch/',
+      skip_if_unavailable => true,
+      gpgcheck            => 1,
+      gpgkey              => 'https://copr-be.cloud.fedoraproject.org/results/cmdntrf/openpmix/pubkey.gpg',
+      repo_gpgcheck       => 0,
+    }
+
   }
 
   package { 'slurm':
@@ -167,10 +178,9 @@ END
                 Yumrepo['slurm-copr-repo']],
   }
 
-  package { 'slurm-libpmi':
+  package { 'pmix':
     ensure  => 'installed',
-    require => [Package['munge'],
-                Yumrepo['slurm-copr-repo']]
+    require => [Yumrepo['pmix-copr-repo']]
   }
 
   file { 'slurm.conf.tpl':

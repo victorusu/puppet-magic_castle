@@ -58,7 +58,7 @@ class profile::accounts::guests(
   String[8] $passwd,
   Integer[0] $nb_accounts,
   String[1] $prefix = 'user',
-  String[3] $sponsor = 'reframe'
+  String[3] $sponsor = 'sponsor00'
   )
 {
   require profile::accounts

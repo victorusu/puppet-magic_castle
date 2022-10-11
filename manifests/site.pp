@@ -11,6 +11,7 @@ node default {
   }
 
   include profile::base
+  include profile::users::local
   include profile::metrics::exporter
 
   if 'login' in $instance_tags {
@@ -30,12 +31,16 @@ node default {
 
     include profile::freeipa::mokey
     include profile::slurm::accounting
-    include profile::workshop::mgmt
 
     include profile::accounts
-    include profile::accounts::guests
+    include profile::users::ldap
+    class { 'profile::sssd::client':
+      domains     => lookup('profile::sssd::client::domains', undef, undef, {}),
+      deny_access => true,
+    }
   } else {
     include profile::freeipa::client
+    include profile::sssd::client
     include profile::rsyslog::client
   }
 
@@ -46,6 +51,9 @@ node default {
     include profile::jupyterhub::node
 
     include profile::slurm::node
+
+    Class['profile::nfs::client'] -> Service['slurmd']
+    Class['profile::gpu'] -> Service['slurmd']
   }
 
   if 'nfs' in $instance_tags {
@@ -57,7 +65,10 @@ node default {
   if 'proxy' in $instance_tags {
     include profile::jupyterhub::hub
     include profile::reverse_proxy
-    include profile::globus::base
+  }
+
+  if 'dtn' in $instance_tags {
+    include profile::globus
   }
 
   if 'mfa' in $instance_tags {

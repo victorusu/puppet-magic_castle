@@ -1,20 +1,43 @@
 class profile::base (
-  Array[String] $public_keys,
-  String $sudoer_username = 'centos',
+  String $version,
   Optional[String] $admin_email = undef,
 ) {
   include stdlib
   include ::consul_template
   include epel
+  include selinux
+
+  file { '/etc/magic-castle-release':
+    content => "Magic Castle release ${version}",
+  }
+
+  # Ensure consul can read the state of agent_catalog_run.lock
+  file { '/opt/puppetlabs/puppet/cache':
+    ensure => directory,
+    mode   => '0751',
+  }
+
+  file { '/usr/sbin/prepare4image.sh':
+    source => 'puppet:///modules/profile/base/prepare4image.sh',
+    mode   => '0755',
+  }
 
   if dig($::facts, 'os', 'release', 'major') == '8' {
-    file_line { 'enable_powertools':
-      ensure => present,
-      path   => '/etc/yum.repos.d/CentOS-Linux-PowerTools.repo',
-      line   => 'enabled=1',
-      match  => '^enabled=0$',
+    exec { 'enable_powertools':
+      command => 'dnf config-manager --set-enabled powertools',
+      unless  => 'dnf config-manager --dump powertools | grep -q \'enabled = 1\'',
+      path    => ['/usr/bin']
     }
   }
+
+  $instances = lookup('terraform.instances')
+  $nodes = $instances.filter |$keys, $values| { 'node' in $values['tags'] }
+  $host_to_add = Hash($nodes.map |$k, $v| { [$k, { 'ip' => $v['local_ip'] }] })
+  ensure_resources('host', $host_to_add)
+
+  $type = 'ed25519'
+  $sshkey_to_add = Hash($nodes.map |$k, $v| { [$k, { 'key' => split($v['hostkeys'][$type], /\s/)[1], 'type' => "ssh-${type}" }] })
+  ensure_resources('sshkey', $sshkey_to_add)
 
   if dig($::facts, 'os', 'release', 'major') == '7' {
     package { 'yum-plugin-priorities':
@@ -44,39 +67,6 @@ class profile::base (
 
   file { '/etc/puppetlabs/puppet/csr_attributes.yaml':
     ensure => absent
-  }
-
-  class { 'selinux':
-    mode => 'enforcing',
-    type => 'targeted',
-  }
-
-  # Configure sudoer account and ssh keys
-  user { $sudoer_username:
-    ensure         => present,
-    home           => "/${sudoer_username}",
-    purge_ssh_keys => true,
-  }
-  $public_keys.each | Integer $index, String $sshkey | {
-    $split = split($sshkey, ' ')
-    if length($split) > 2 {
-      $name = String($split[2], '%t')
-    } else {
-      $name = "${sudoer_username}_sshkey_${index}"
-    }
-    ssh_authorized_key { $name:
-      ensure => present,
-      user   => $sudoer_username,
-      type   => $split[0],
-      key    => $split[1],
-    }
-  }
-
-  # Configure sudoer_username user selinux mapping
-  exec { 'selinux_login_sudoer':
-    command => "semanage login -a -S targeted -s 'unconfined_u' -r 's0-s0:c0.c1023' ${sudoer_username}",
-    unless  => "grep -q '${sudoer_username}:unconfined_u:s0-s0:c0.c1023' /etc/selinux/targeted/seusers",
-    path    => ['/bin', '/usr/bin', '/sbin', '/usr/sbin'],
   }
 
   class { '::swap_file':
@@ -181,6 +171,22 @@ class profile::base (
     notify => Service['sshd']
   }
 
+  if dig($::facts, 'os', 'release', 'major') == '8' {
+    # sshd hardening in CentOS 8 requires fidgetting with crypto-policies
+    # instead of modifying /etc/ssh/sshd_config
+    # https://sshaudit.com/hardening_guides.html#rhel8
+    # We replace the file in /usr/share/crypto-policies instead of
+    # /etc/crypto-policies as suggested by sshaudit.com, because the script
+    # update-crypto-policies can be called by RPM scripts and overwrites the
+    # config in /etc by what's in /usr/share. The files in /etc/crypto-policies
+    # are in just symlinks to /usr/share
+    file { '/usr/share/crypto-policies/DEFAULT/opensshserver.txt':
+      ensure => present,
+      source => 'puppet:///modules/profile/base/opensshserver.config',
+      notify => Service['sshd'],
+    }
+  }
+
   if $::facts.dig('cloud', 'provider') == 'azure' {
     include profile::base::azure
   }
@@ -188,14 +194,6 @@ class profile::base (
   # Remove scripts leftover by terraform remote-exec provisioner
   file { glob('/tmp/terraform_*.sh'):
     ensure => absent
-  }
-
-  $mc_plugins_version = '1.0.3'
-  package { 'magic_castle-plugins':
-    ensure   => 'latest',
-    name     => 'magic_castle-plugins',
-    provider => 'rpm',
-    source   => "https://github.com/computecanada/magic_castle-plugins/releases/download/v${mc_plugins_version}/magic_castle-plugins-${mc_plugins_version}-1.${::facts['os']['architecture']}.rpm",
   }
 }
 

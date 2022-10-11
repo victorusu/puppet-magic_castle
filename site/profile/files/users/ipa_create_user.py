@@ -1,10 +1,8 @@
 #!/usr/libexec/platform-python
 import argparse
-import grp
 import logging
 import logging.handlers
 import os
-import sys
 import time
 
 from ipalib import api, errors
@@ -17,13 +15,13 @@ from six import text_type
 # TODO: get this value from /etc/login.defs
 UID_MAX = 60000
 
-iau_logger = logging.getLogger("IPA_CREATE_USER.py")
+iau_logger = logging.getLogger("IPA_CREATE_USER.PY")
 iau_logger.setLevel(logging.INFO,)
 formatter = logging.Formatter(
     fmt="%(asctime)s.%(msecs)03d %(levelname)s {%(module)s} [%(funcName)s] %(message)s",
     datefmt="%Y-%m-%d,%H:%M:%S",
 )
-handler = logging.handlers.RotatingFileHandler("/var/log/ipa_user_add.log")
+handler = logging.StreamHandler()
 handler.setFormatter(fmt=formatter)
 iau_logger.addHandler(handler)
 
@@ -35,14 +33,17 @@ def init_api():
     api.Backend.cli.create_context()
 
 
-def user_add(uid, first, last, password, shell):
-    kargs = dict(
-        uid=text_type(uid),
-        givenname=text_type(first),
-        sn=text_type(last),
-        userpassword=text_type(password),
-        loginshell=text_type(shell),
-    )
+def user_add(uid, first, last, password, shell, sshpubkeys):
+    kargs = dict()
+    kargs['uid'] = text_type(uid)
+    kargs['givenname'] = text_type(first)
+    kargs['sn'] = text_type(last)
+    if password:
+        kargs['userpassword'] = text_type(password)
+    if sshpubkeys:
+        kargs['ipasshpubkey'] = list(map(text_type, sshpubkeys))
+    kargs['loginshell'] = text_type(shell)
+
     try:
         uidnumber = os.stat("/mnt/home/" + uid).st_uid
     except:
@@ -75,7 +76,7 @@ def user_add(uid, first, last, password, shell):
 
 def group_add(name):
     try:
-        return api.Command.group_add(name)
+        return api.Command.group_add(text_type(name))
     except errors.DuplicateEntry:
         return
 
@@ -94,39 +95,51 @@ def kdestroy():
     ipautil.run([paths.KDESTROY])
 
 
-def main(users, sponsor):
-    admin_passwd = os.environ["IPA_ADMIN_PASSWD"]
-    guest_passwd = os.environ["IPA_GUEST_PASSWD"]
+def main(users, groups, passwd, sshpubkeys):
     init_api()
-    kinit("admin", admin_passwd)
     added_users = set()
     for username in users:
         user = user_add(
             username,
             first=username,
             last=username,
-            password=guest_passwd,
+            password=passwd,
             shell="/bin/bash",
+            sshpubkeys=sshpubkeys
         )
         if user is not None:
             added_users.add(username)
-    if sponsor:
-        group = u"def-" + sponsor
+    for group in groups:
         group_add(group)
         group_add_members(group, users)
-    kdestroy()
 
-    # configure user password
-    for username in added_users:
-        kinit(username, "\n".join([guest_passwd] * 3))
-        kdestroy()
+    if passwd:
+        # configure user password
+        for username in added_users:
+            kinit(username, "\n".join([passwd] * 3))
+            kdestroy()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Add a batch of generic users with the same sponsor"
+        description="Add a batch of users with common a password and groups"
     )
     parser.add_argument("users", nargs="+", help="list of usernames to create")
-    parser.add_argument("--sponsor", help="name of the sponsor if any")
+    parser.add_argument("--group", action='append', help="group the users will be member of (can be specified multiple times)")
+    parser.add_argument("--passwd", help="users's password")
+    parser.add_argument("--sshpubkey", action="append", help="SSH public key (can be specified multiple times)")
     args = parser.parse_args()
-    main(args.users, args.sponsor)
+
+    if args.passwd is not None:
+        passwd = args.passwd
+    elif "IPA_USER_PASSWD" in os.environ:
+        passwd = os.environ["IPA_USER_PASSWD"]
+    else:
+        passwd = None
+
+    main(
+        users=args.users,
+        groups=args.group,
+        passwd=passwd,
+        sshpubkeys=args.sshpubkey
+    )

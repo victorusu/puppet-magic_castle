@@ -7,8 +7,8 @@ class profile::cvmfs::client(
   package { 'cvmfs-repo':
     ensure   => 'installed',
     provider => 'rpm',
-    name     => 'cvmfs-release-2-6.noarch',
-    source   => 'https://ecsft.cern.ch/dist/cvmfs/cvmfs-release/cvmfs-release-latest.noarch.rpm'
+    name     => 'cvmfs-release-3-2.noarch',
+    source   => 'https://ecsft.cern.ch/dist/cvmfs/cvmfs-release/cvmfs-release-3-2.noarch.rpm',
   }
 
   if $::software_stack == 'eessi' {
@@ -97,11 +97,12 @@ class profile::cvmfs::client(
 
   # Make sure CVMFS repos are mounted when requiring this class
   exec { 'init_default.local':
-    command => 'consul-template -config /etc/consul-template/config -template="/etc/cvmfs/default.local.ctmpl:/etc/cvmfs/default.local" -once',
-    path    => ['/bin', '/usr/bin', $consul_template::bin_dir],
-    unless  => 'test -f /etc/cvmfs/default.local',
-    require => [
-      Consul_template::Watch['/etc/cvmfs/default.local'],
+    command     => 'consul-template -template="/etc/cvmfs/default.local.ctmpl:/etc/cvmfs/default.local" -once',
+    environment => ["CONSUL_TOKEN=${lookup('profile::consul::acl_api_token')}"],
+    path        => ['/bin', '/usr/bin', $consul_template::bin_dir],
+    unless      => 'test -f /etc/cvmfs/default.local',
+    require     => [
+      File['/etc/cvmfs/default.local.ctmpl'],
       Service['consul'],
       Service['autofs'],
     ],

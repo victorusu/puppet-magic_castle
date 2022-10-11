@@ -10,32 +10,51 @@ variables for each profile.
 
 | Variable                                  | Type       | Description                                                                         | Default       |
 | ----------------------------------------- | :--------  | :---------------------------------------------------------------------------------- | ------------- |
-| `profile::accounts::guests::passwd`       | String[8]  | Password set for all guest accounts (min length: 8)                                 |               |
-| `profile::accounts::guests::nb_accounts`  | Integer[0] | Number of guests account that needs to be created (min value: 0)                    |               |
-| `profile::accounts::guests::prefix`       | String[1]  | Prefix for guest account usernames followed an index i.e: `user12` (min length: 1)  | `'user'`      |
-| `profile::accounts::guests::sponsor`      | String[3]  | Name for the sponsor group and sponsor Slurm account  (min length: 3)               | `'sponsor00'` |
+| `profile::accounts:::project_regex` | String | Regex to identify LDAP groups that should also be Slurm accounts | `'(ctb\|def\|rpp\|rrg)-[a-z0-9_-]*'` |
+| `profile::accounts:::skel_archives` | Array[Struct[{filename => String[1], source => String[1]}]] | List of archives that will be extracted and copied in each FreeIPA user's home folder when first created. | `[]` |
+
+### profile::accounts::skel_archives example
+```
+profile::accounts:::skel_archives:
+  - filename: hss-programing-lab-2022.zip
+    source: https://github.com/ComputeCanada/hss-programing-lab-2022/archive/refs/heads/main.zip
+  - filename: hss-training-topic-modeling.tar.gz
+    source: https://github.com/ComputeCanada/hss-training-topic-modeling/archive/refs/heads/main.tar.gz
+```
 
 ## profile::base
 
 | Variable                         | Type   | Description                                                                             | Default    |
 | -------------------------------- | :----- | :-------------------------------------------------------------------------------------- | ---------- |
+| `profile::base::version`     | String | Current version number of Magic Castle  | `'12.0.0'` |
 | `profile::base::admin_email`     | String | Email of the cluster administrator, use to send log and report cluster related issues   | `undef`    |
-| `profile::base::sudoer_username` | String | Name of the user with sudo rights. Used to config SELinux user mapping                  | `'centos'` |
+
+## profile::ceph
+| Variable                         | Type   | Description                                                                             | Default    |
+| -------------------------------- | :----- | :-------------------------------------------------------------------------------------- | ---------- |
+| `profile::ceph::share_name` | String | CEPH share name |  |
+| `profile::ceph::access_key` | String | CEPH share access key |  |
+| `profile::ceph::export_path`| String | Path of the share as exported by the monitors |  |
+| `profile::ceph::mon_host`   | Array[String] | List of CEPH monitor hostnames | |
+| `profile::ceph::mount_binds`| Array[String] | List of CEPH share folders that will bind mounted under `/` | `[]`  |
+| `profile::ceph::mount_name` | String | Name to give to the CEPH share once mounted under `/mnt` | `'cephfs01'` |
+| `profile::ceph::binds_fcontext_equivalence` | String | SELinux file context equivalence for the CEPH share | '`/home`' |
+
 
 ## profile::consul
 
 | Variable                       | Type   | Description                                                             | Default  |
 | ------------------------------ | :----- | :---------------------------------------------------------------------- | -------- |
-| `profile::consul::server_ip`   | String | IP address of the consul server                                         |          |
+| `profile::consul::client::server_ip`   | String | IP address of the consul server                                         |          |
 
 ## profile::cvmfs
 
 | Variable                                         | Type          | Description                                    | Default                                                              |
 | ------------------------------------------------ | :------------ | :--------------------------------------------- | -------------------------------------------------------------------- |
-| `profile::cvmfs::client::quota_limit`            | Integer       | Instance local cache directory soft quota (MB) | 4096                                                                 |
-| `profile::cvmfs::client::repositories`           | Array[String] | List of CVMFS repositories to mount            | `['cvmfs-config.computecanada.ca', 'soft.computecanada.ca']`         |
-| `profile::cvmfs::client::lmod_default_modules`   | Array[String] | List of lmod default modules                   | `['nixpkgs/16.09', 'imkl/2018.3.222', 'gcc/7.3.0', 'openmpi/3.1.2']` |
-
+| `profile::cvmfs::client::quota_limit` | Integer | Instance local cache directory soft quota (MB) | 4096 |
+| `profile::cvmfs::client::initial_profile` | String | Path to shell script initializing software stack environment variables | Depends on the chosen software stack |
+| `profile::cvmfs::client::repositories` | Array[String] | List of CVMFS repositories to mount  | Depends on the chosen software stack |
+| `profile::cvmfs::client::lmod_default_modules`   | Array[String] | List of lmod default modules | Depends on the chosen software stack |
 
 ## profile::fail2ban
 
@@ -47,29 +66,38 @@ variables for each profile.
 
 ## profile::freeipa
 
-| Variable                                         | Type    | Description                                                                         | Default  |
-| ------------------------------------------------ | :-----  | :---------------------------------------------------------------------------------- | -------- |
-| `profile::freeipa::base::admin_passwd`           | String  | Password of the FreeIPA admin account, also used by the clients to join the server  |          |
-| `profile::freeipa::base::dns_ip`                 | String  | FreeIPA DNS server IP Address. Used by the client to join find the server           |          |
-| `profile::freeipa::base::domain_name`            | String  | FreeIPA primary domain                                                              |          |
-| `profile::freeipa::client::server_ip`            | String  | FreeIPA server ip address                                                           |          |
-| `profile::freeipa::mokey::port`                  | Integer | Mokey internal web server port                                                      | `12345`  |
-| `profile::freeipa::mokey::enable_user_signup`    | Boolean | Allow users to create an account on the cluster                                     | `true`   |
-| `profile::freeipa::mokey::require_verify_admin`  | Boolean | Require a FreeIPA to enable Mokey created account before usage                      | `true`   |
+| Variable | Type | Description | Default |
+| -------- | :--  | :---------- | ------- |
+| `profile::freeipa::base::admin_passwd`| String  | Password of the FreeIPA admin account, also used by the clients to join the server  | |
+| `profile::freeipa::base::domain_name` | String  | FreeIPA primary domain | |
+| `profile::freeipa::client::server_ip` | String  | FreeIPA server ip address | |
+| `profile::freeipa::mokey::port` | Integer | Mokey internal web server port | `12345`  |
+| `profile::freeipa::mokey::enable_user_signup` | Boolean | Allow users to create an account on the cluster | `true` |
+| `profile::freeipa::mokey::require_verify_admin` | Boolean | Require a FreeIPA to enable Mokey created account before usage | `true` |
 
-## profile::globus
+## profile::mfa
 
-| Variable                           | Type   | Description                                                             | Default  |
-| ---------------------------------- | :----- | :---------------------------------------------------------------------- | -------- |
-| `profile::globus::base::globus_user`     | String | Username under which the globus endpoint will be registered.            | `undef`  |
-| `profile::globus::base::globus_password` | String | Password associated with the globus username.                           | `undef`  |
+| Variable                 | Type                | Description                        | Default |
+| ------------------------ | :------------------ | :--------------------------------- | ------- |
+| `profile::mfa::provider` | Enum['none', 'duo'] | MFA provider for node tagged 'mfa' | 'none'  |
+
+### duo_unix
+
+| Variable             | Type   | Description                  | Default                  |
+| -------------------- | :----- | :--------------------------- | ------------------------ |
+| `duo_unix::usage`    | String | Either login or pam          | `login`                  |
+| `duo_unix::ikey`     | String | Duo integration              | `''`                     |
+| `duo_unix::skey`     | String | Duo secret key               | `''`                     |
+| `duo_unix::host`     | String | Duo api host                 | `''`                     |
+| `duo_unix::motd`     | String | Enable motd                  | `no`                     |
+| `duo_unix::failmode` | String | Failure mode, secure or safe | `safe`                   |
 
 ## profile::nfs
 
 | Variable                           | Type   | Description                            | Default  |
 | ---------------------------------- | :----- | :------------------------------------- | -------- |
 | `profile::nfs::client::server_ip`  | String | IP address of the NFS server           | `undef`  |
-
+| `profile::nfs::server::devices`  | Variant[String, Hash[String, Array[String]]] | Mapping between NFS share and devices to export. Generated automatically with Terraform data |  |
 
 ## profile::reverse_proxy
 
@@ -86,10 +114,18 @@ variables for each profile.
 | ------------------------------------- | :------ | :---------------------------------------------------------------------- | -------- |
 | `profile::slurm::base::cluster_name`  | String  | Name of the cluster                                                     |          |
 | `profile::slurm::base::munge_key`     | String  | Base64 encoded Munge key                                                |          |
-| `profile::slurm::base::slurm_version`  | Enum[19.05, 20.11]  | Slurm version to install                                                      | 20.11       |
-| `profile::slurm::base::enable_x11_forwarding`  | Boolean  | Enable Slurm's built-in X11 forwarding capabilities | `true`       |
-| `profile::slurm::accounting:password` | String  | Password used by for SlurmDBD to connect to MariaDB                     |          |
-| `profile::slurm::accounting:dbd_port` | Integer | SlurmDBD service listening port                                         |          |
+| `profile::slurm::base::slurm_version`  | Enum[20.11, 21.08, 22.05]  | Slurm version to install                            | 21.08    |
+| `profile::slurm::base::os_reserved_memory`  | Integer  | Quantity of memory in MB reserved for the operating system on the compute nodes | 512 |
+| `profile::slurm::base::suspend_time`  | Integer  | Nodes becomes eligible for suspension after being idle for this number of seconds. | 3600 |
+| `profile::slurm::base::resume_timeout`  | Integer  | Maximum time permitted (in seconds) between when a node resume request is issued and when the node is actually available for use. | 3600 |
+| `profile::slurm::base::force_slurm_in_path`  | Boolean  | When enabled, all users (local and LDAP) will have slurm binaries in their PATH | `false`   |
+| `profile::slurm::base::enable_x11_forwarding`  | Boolean  | Enable Slurm's built-in X11 forwarding capabilities           | `true`   |
+| `profile::slurm::accounting::password` | String  | Password used by for SlurmDBD to connect to MariaDB                    |          |
+| `profile::slurm::accounting::dbd_port` | Integer | SlurmDBD service listening port                                        |          |
+| `profile::slurm::controller::selinux_context` | String | SELinux context for jobs (used only with Slurm >= 21.08)         | `user_u:user_r:user_t:s0` |
+| `profile::slurm::controller::tfe_token` | String | Terraform Cloud API Token. Required to enable autoscaling. | `''` |
+| `profile::slurm::controller::tfe_workspace` | String | Terraform Cloud workspace id. Required to enable autoscaling. | `''` |
+| `profile::slurm::controller::tfe_var_pool` | String | Named of the variable in Terraform Cloud workspace to control compute node pool | `'pool'` |
 
 ## profile::squid
 
@@ -99,26 +135,43 @@ variables for each profile.
 | `profile::squid::cache_size`          | Integer        | Amount of disk space (MB) that can be used by Squid service                 | 4096     |
 | `profile::squid::cvmfs_acl_regex`     | Array[String]  | List of regexes corresponding to CVMFS stratum users are allowed to access  | `['^(cvmfs-.*\.computecanada\.ca)$', '^(.*-cvmfs\.openhtc\.io)$', '^(cvmfs-.*\.genap\.ca)$']`     |
 
-## profile::workshop
+## profile::users
 
-| Variable                          | Type   | Description                                                                     | Default                  |
-| --------------------------------- | :----- | :------------------------------------------------------------------------------ | ------------------------ |
-| `profile::workshop::userzip_url`  | String | URL pointing to a zip that needs to be extracted in each guest account's home   | `''`                     |
-| `profile::workshop::userzip_path` | String | Path on the nfs server where to save the userzip archive                        | `'/project/userzip.zip'` |
+| Variable                              | Type           | Description                                                                 | Default  |
+| ------------------------------------- | :------------- | :-------------------------------------------------------------------------- | -------- |
+| `profile::users::ldap::users` | Hash[Hash] | Dictionary of users to be created in LDAP | |
+| `profile::users::local::users` | Hash[Hash] | Dictionary of users to be created locally | |
 
-## profile::mfa
+### profile::users::ldap::users
 
-| Variable                 | Type                | Description                        | Default |
-| ------------------------ | :------------------ | :--------------------------------- | ------- |
-| `profile::mfa::provider` | Enum['none', 'duo'] | MFA provider for node tagged 'mfa' | 'none'  |
+A batch of 10 LDAP users, user01 to user10, can be defined in hieradata as:
+```
+profile::users::ldap::users:
+  user:
+    count: 10
+    passwd: user.password.is.easy.to.remember
+    groups: ['def-sponsor00']
+```
 
-## duo_unix
+A single LDAP user can be defined as:
+```
+profile::users::ldap::users:
+  alice:
+    passwd: user.password.is.easy.to.remember
+    groups: ['def-sponsor00']
+    public_keys: ['ssh-rsa ... user@local', 'ssh-ecdsa ...']
+```
 
-| Variable             | Type   | Description                  | Default                  |
-| -------------------- | :----- | :--------------------------- | ------------------------ |
-| `duo_unix::usage`    | String | Either login or pam          | `login`                  |
-| `duo_unix::ikey`     | String | Duo integration              | `''`                     |
-| `duo_unix::skey`     | String | Duo secret key               | `''`                     |
-| `duo_unix::host`     | String | Duo api host                 | `''`                     |
-| `duo_unix::motd`     | String | Enable motd                  | `no`                     |
-| `duo_unix::failmode` | String | Failure mode, secure or safe | `safe`                   |
+### profile::users::local::users
+
+A local user `bob` can be defined in hieradata as:
+```
+profile::users::local::users:
+  bob:
+    groups: ['group1', 'group2']
+    public_keys: ['ssh-rsa...', 'ssh-dsa']
+    # sudoer: false
+    # selinux_user: 'unconfined_u'
+    # mls_range: ''s0-s0:c0.c1023'
+```
+
